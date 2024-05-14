@@ -1,0 +1,288 @@
+---
+title: "Projet Séries Temporelles \n Modèlisation Sarima"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+```{r include = FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+```
+
+```{r include= FALSE, message = FALSE, warning=FALSE}
+library(forecast)
+#tinytex::install_tinytex()
+```
+
+## Introduction à la méthode de Box-Jenkins.
+
+La méthodologie la plus connue pour modéliser une série temporelle est la méthode de Box-Jenkins. 
+
+Elle suit les étapes suivantes : 
+
+* Stationnarisation de la série 
+* Identification des modèles potentiels
+* Estimation des modèles potentiels
+* Vérification des modèles potentiels
+* Choix du modèle 
+* Prévision du modèle 
+* Analyse à Posteriori
+
+
+## Cross - Validation : 
+
+Pour pouvoir entrainer notre modèle et valider les prévisions nous allons couper notre série en deux parties. 
+
+**USAccDeaths.M** : Partie de la série dédiée à l'entrainement, contiendra les années et mois de janvier 1973 à décembre 1977.
+
+**USAccDeaths.T** : Partie de la série dédiée au test, contiendra la dernière année.
+
+```{r}
+USAccDeaths.M = window(USAccDeaths, 1973, c(1977,12))
+USAccDeaths.T = window(USAccDeaths, 1978)
+print("USAccDeaths.T : ")
+USAccDeaths.T
+```
+
+
+## Stationnarisation de la série : 
+
+Tout d'abord, affichons la série et voyons ce qu'on peut en conjecturer : 
+
+```{r out.width="50%"}
+plot(USAccDeaths)
+```
+
+On peut conjecturer qu'il y'a une seasonalité douze mais il ne semble pas y avoir de tendance. La série garde aussi une variance relativement similaire tout au long, donc elle n'est pas hétéroscedastique il n'est pas donc pas nécessaire de passer la série au log ou à la racine.
+
+
+Etudions à présent l'**ACF** et le **PACF** pour essayer de voir s'il y'a des possibilités de différenciation/stationnarisation.
+
+```{r out.width="90%"}
+Acf(USAccDeaths.M, lag.max = 37)
+```
+
+```{r out.width="80%", out.height= "80%"}
+Pacf(USAccDeaths.M, lag.max = 37)
+```
+
+On remarque, sur l'ACF, des pics qui se répétent tous les temps en douze. Ce qui indique une **séasonnalité en 12**.
+Nous allons donc différencier la série en 12, en appliquant : $\nabla^{D}_{s}$ = $(I - B^s)^D$ avec $s = 12$ à la série.
+
+```{r out.width="80%", out.height = "80%"}
+USAccDeaths.M.stati = diff(USAccDeaths.M, lag = 12)
+plot(USAccDeaths.M.stati)
+```
+
+
+\newpage
+
+### Modélisation de la série :
+
+Pour la modélisation de la série, nous analyserons les ACF et PACF comme suite : 
+
+| $Modèle$  | $ACF$ | $PACF$ |
+|:-------:|:-------:|:--------:|
+| $AR(p)$ | $Décroissance$ $exponentielle$ | $0$  $\forall h > p$ |
+| $MA(q)$ |  $0$  $\forall h > q$ | $Décroissance$ $exponentielle$ |
+
+Etudions à nouveau l'ACF et le PACF : 
+
+```{r out.width="80%", out.height = "80%"}
+Acf(USAccDeaths.M.stati, lag.max = 37)
+```
+
+```{r out.width="80%", out.height = "80%"}
+Pacf(USAccDeaths.M.stati, lag.max = 37)
+```
+
+On a un $ACF$ en décroissance exponentielle et PACF nul pour $\forall$ $h > 1$. C'est les propriétés d'un AR(1). 
+
+On va donc modéliser notre série par un $AR(1)$.
+
+
+```{r}
+mod1 = Arima(USAccDeaths.M.stati, order = c(1,0,0))
+summary(mod1)
+```
+
+#### Etude des résidus :
+
+A présent nous allons étudier l'$ACF$ et le $PACF$ des résidus, afin de vérifier si il y'a possibilité d'affiner le modèle.
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod1), lag.max = 37)
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod1), lag.max = 37)
+```
+
+Analysons le lagplot des résidus :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod1), lags = 24)
+```
+
+
+\newpage
+
+## Deuxième modèle :
+
+On remarque un $ACF$ nul pour $\forall$ $h > 12$. On peut ajouter un $MA(12)$ à nos résidus, d'où ce deuxième modèle : 
+
+```{r}
+mod2 = Arima(USAccDeaths.M.stati, order = c(1,0,0), seasonal = list(order = c(0,0,1)))
+summary(mod2)
+```
+
+## Etudions les résidus : 
+
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod2))
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod2))
+```
+
+L'ACF et le PACF sont tous les deux nuls, il n'y a plus d'affinage possible sur ce modèle. On obtient des **résidus bruits blancs**.
+
+\newpage
+
+## Troisième modèle :
+
+On remarque qu'une fois différenciée en seasonalité, la série présente une tendance linéaire. Nous allons donc appliquer l'opérateur $\nabla^d$ $=$ $(I - B)^d$, en plus des modifications précédemments effectuées : 
+
+```{r}
+mod3 = Arima(USAccDeaths.M.stati, order = c(1,1,0), seasonal = list(order = c(0,0,1)))
+summary(mod3)
+``` 
+
+### Etude des résidus :
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod3))
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod3))
+```
+
+Les résidus sont **des bruits blancs** pour les mêmes raisons que précédemment.
+
+\newpage
+
+## Choix du modèle :
+
+Nous avons à présent deux modèles valides (dont les résidus sont des bruits blancs). Afin de les départager nous allons faire plusieurs vérifications. Premièrement, que les résidus sont bien des bruits blancs via le lag-plot. Deuxièmement, que les coefficients de la partie $AR$ ne sont pas proche de 1. Et finalement, étudier le critère d'Akaike ($AIC$).    
+
+### Vérification des résidus :
+
+#### Modèle 2 :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod2), lags = 25)
+```
+
+#### Modèle 3 :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod3), lags = 25)
+```
+
+#### Conclusion : 
+
+Les lag-plots montre qu'il n'a aucune corrélation entre les résidus des deux modèles, ce n'est donc pas possible de les départager avec cette première vérification.
+
+
+### Coefficients de la partie AR :
+
+#### modèle 2 :
+
+```{r}
+mod2$coef
+```
+
+#### modèle 3 :
+
+```{r}
+mod3$coef
+```
+
+#### Conclusion : 
+
+
+Les deux modèles ont des coefficients AR assez loin de $1$. Donc la partie stationnaire modélisée est bien stationnaire.
+
+
+### Criètre d'Akaike :
+
+Le critère d'Akaike, $AIC(p,q)$ $=$ $log(\sigma^2)$ $+$ $2\frac{p+q}{T}$, en minimisant ce critère cela permettra d'avoir à la fois le modèle le **mieux ajustée** et le plus **parcimonieux**.
+
+```{r}
+sprintf("AIC du modèle 2 : %f", mod2$aic)
+sprintf("AIC du modèle 3 : %f", mod3$aic)
+```
+
+C'est le troisième modèle qui présente l'AIC le plus faible.
+
+### Conclusion de la comparaison des modèles : 
+
+Nos deux modèles sont valides; leurs résidus sont bien des bruits blancs et les coefficients de la partie $AR$ sont loin de 1. Ce qui va permettre de les départager c'est le critère d'Akaike, en effet, c'est le modèle 3 qui minimise ce critère et c'est pourquoi on va passer à la partie prévision avec ce modèle.
+
+\newpage
+
+## Prévisions du modèle : 
+
+Le modèle final est le suivant :
+
+<p style="text-align: center;"> $\phi(\beta)\nabla^dX_t$ $=$ $\theta(\beta^s)\nabla^D_s\epsilon_t$ </p>
+
+Avec : 
+
+* $\phi(B)$ $=$ $I - B$, partie $AR(1)$.
+* $\nabla^d$ $=$ $(I - B)^d$, avec $d$ $=$ $1$. Partie stationnarisation.
+* $\theta(B^S)$ $=$ $(I - B^s)$, avec $s$ $=$ $12$. $MA(12)$.
+* $\nabla^D_s$ $=$ $(I - B^s)^D$, avec $s$ $=$ $12$, $D$ $=$ $1$. Partie différenciation.
+
+Nous allons effectuer des prévisions sur 12 mois, et comparer les données prédites aux données réels.
+
+```{r out.width="80%", out.height = "80%"}
+modfinal = Arima(USAccDeaths.M, order = c(1,1,0), seasonal = list(order = c(0,1,1), period = 12))
+summary(modfinal)
+```
+```{r out.width="80%", out.height = "80%"}
+prevision =  forecast(modfinal, 12)
+
+{plot(prevision)
+points(USAccDeaths.T, type = "l", col = "red", lwd = 1.5)}
+```
+
+### Analyse à Posteriori :
+
+Pour analyser la qualité de la prédiction, on va calculer le $RMSE$ et le $MAPE$.
+
+* $RMSE$ = $\sqrt(\frac{1}{n}\sum_{i = 1}^{n}(X_i - \hat{X_i})^2)$
+* $MAPE$ = $\sqrt(\frac{1}{n}\sum_{i = 1}^{n}(\lvert \frac{X_i - \hat{X_i}}{X_i} \rvert))$
+
+```{r}
+RMSE.lm <- sqrt(mean((prevision$mean - USAccDeaths.T)^2))
+MAPE.lm <- mean(abs((prevision$mean - USAccDeaths.T)/abs(USAccDeaths.T)))
+
+sprintf("RMSE : %f", RMSE.lm)
+sprintf("MAPE : %f", MAPE.lm)
+```
+
+
+
+
+
+
+
+
+
+
+

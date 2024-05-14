@@ -1,0 +1,690 @@
+---
+title: "Projet Séries Temporelles"
+author: "CONSTANZA Corentin HOUFAF KHOUFAF RAFIQ"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+```{r include = FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+```
+# Introduction
+
+Cette étude vise à etudier une série temporelle afin de comprendre ses variations ainsi que le phénomène qu'elle représente. On cherchera ensuite à prédire des valeurs futures par le biais de plusieurs modélisations :
+- SARIMA
+- Lissage exponentiel
+- Régression Linéaire
+
+Ci-dessous, le chronogramme de la série temporelle que nous allons modéliser. 
+
+```{r echo=FALSE}
+plot(USAccDeaths)
+```
+
+Ces données correspondent à la au nombre d'accident de voiture entre 1973 et 1979. Nous pouvons observer que cette série ne **semble** pas avoir de tendance une variance qui augmente. On va donc privilégier un modèle multiplicatif. Nous n'avons donc pas besoin de passer la serie au Log. On observe aussi une saisonalitée annuelle (12 mois).
+
+Pour commencer, nous allons diviser notre série en deux parties : *train* et *test*. La partie train nous servira pour entrainer nos modèles, et la partie test nous servira pour verifier la précision de nos prédictions avant d'appliquer notre modèle sur tout le jeu de données. 
+
+```{r echo=FALSE}
+train = window(USAccDeaths, start = 1973, end = c(1977,12))
+test = window(USAccDeaths, start = 1978)
+
+par(mfrow = c(1,2))
+plot(train)
+plot(test)
+```
+#Partie 1 : SARIMA
+```{r include= FALSE, message = FALSE, warning=FALSE}
+library(forecast)
+#tinytex::install_tinytex()
+```
+
+## Introduction à la méthode de Box-Jenkins.
+
+La méthodologie la plus connue pour modéliser une série temporelle est la méthode de Box-Jenkins. 
+
+Elle suit les étapes suivantes : 
+
+* Stationnarisation de la série 
+* Identification des modèles potentiels
+* Estimation des modèles potentiels
+* Vérification des modèles potentiels
+* Choix du modèle 
+* Prévision du modèle 
+* Analyse à Posteriori
+
+
+## Cross - Validation : 
+
+Pour pouvoir entrainer notre modèle et valider les prévisions nous allons couper notre série en deux parties. 
+
+**USAccDeaths.M** : Partie de la série dédiée à l'entrainement, contiendra les années et mois de janvier 1973 à décembre 1977.
+
+**USAccDeaths.T** : Partie de la série dédiée au test, contiendra la dernière année.
+
+```{r}
+USAccDeaths.M = window(USAccDeaths, 1973, c(1977,12))
+USAccDeaths.T = window(USAccDeaths, 1978)
+print("USAccDeaths.T : ")
+USAccDeaths.T
+```
+
+
+## Stationnarisation de la série : 
+
+Tout d'abord, affichons la série et voyons ce qu'on peut en conjecturer : 
+
+```{r out.width="50%"}
+plot(USAccDeaths)
+```
+
+On peut conjecturer qu'il y'a une seasonalité douze mais il ne semble pas y avoir de tendance. La série garde aussi une variance relativement similaire tout au long, donc elle n'est pas hétéroscedastique il n'est pas donc pas nécessaire de passer la série au log ou à la racine.
+
+
+Etudions à présent l'**ACF** et le **PACF** pour essayer de voir s'il y'a des possibilités de différenciation/stationnarisation.
+
+```{r out.width="90%"}
+Acf(USAccDeaths.M, lag.max = 37)
+```
+
+```{r out.width="80%", out.height= "80%"}
+Pacf(USAccDeaths.M, lag.max = 37)
+```
+
+On remarque, sur l'ACF, des pics qui se répétent tous les temps en douze. Ce qui indique une **séasonnalité en 12**.
+Nous allons donc différencier la série en 12, en appliquant : $\nabla^{D}_{s}$ = $(I - B^s)^D$ avec $s = 12$ à la série.
+
+```{r out.width="80%", out.height = "80%"}
+USAccDeaths.M.stati = diff(USAccDeaths.M, lag = 12)
+plot(USAccDeaths.M.stati)
+```
+
+
+\newpage
+
+### Modélisation de la série :
+
+Pour la modélisation de la série, nous analyserons les ACF et PACF comme suite : 
+
+| $Modèle$  | $ACF$ | $PACF$ |
+|:-------:|:-------:|:--------:|
+| $AR(p)$ | $Décroissance$ $exponentielle$ | $0$  $\forall h > p$ |
+| $MA(q)$ |  $0$  $\forall h > q$ | $Décroissance$ $exponentielle$ |
+
+Etudions à nouveau l'ACF et le PACF : 
+
+```{r out.width="80%", out.height = "80%"}
+Acf(USAccDeaths.M.stati, lag.max = 37)
+```
+
+```{r out.width="80%", out.height = "80%"}
+Pacf(USAccDeaths.M.stati, lag.max = 37)
+```
+
+On a un $ACF$ en décroissance exponentielle et PACF nul pour $\forall$ $h > 1$. C'est les propriétés d'un AR(1). 
+
+On va donc modéliser notre série par un $AR(1)$.
+
+
+```{r}
+mod1 = Arima(USAccDeaths.M.stati, order = c(1,0,0))
+summary(mod1)
+```
+
+#### Etude des résidus :
+
+A présent nous allons étudier l'$ACF$ et le $PACF$ des résidus, afin de vérifier si il y'a possibilité d'affiner le modèle.
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod1), lag.max = 37)
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod1), lag.max = 37)
+```
+
+Analysons le lagplot des résidus :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod1), lags = 24)
+```
+
+
+\newpage
+
+## Deuxième modèle :
+
+On remarque un $ACF$ nul pour $\forall$ $h > 12$. On peut ajouter un $MA(12)$ à nos résidus, d'où ce deuxième modèle : 
+
+```{r}
+mod2 = Arima(USAccDeaths.M.stati, order = c(1,0,0), seasonal = list(order = c(0,0,1)))
+summary(mod2)
+```
+
+## Etudions les résidus : 
+
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod2))
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod2))
+```
+
+L'ACF et le PACF sont tous les deux nuls, il n'y a plus d'affinage possible sur ce modèle. On obtient des **résidus bruits blancs**.
+
+\newpage
+
+## Troisième modèle :
+
+On remarque qu'une fois différenciée en seasonalité, la série présente une tendance linéaire. Nous allons donc appliquer l'opérateur $\nabla^d$ $=$ $(I - B)^d$, en plus des modifications précédemments effectuées : 
+
+```{r}
+mod3 = Arima(USAccDeaths.M.stati, order = c(1,1,0), seasonal = list(order = c(0,0,1)))
+summary(mod3)
+``` 
+
+### Etude des résidus :
+
+```{r out.width="80%", out.height = "80%"}
+Acf(residuals(mod3))
+```
+```{r out.width="80%", out.height = "80%"}
+Pacf(residuals(mod3))
+```
+
+Les résidus sont **des bruits blancs** pour les mêmes raisons que précédemment.
+
+\newpage
+
+## Choix du modèle :
+
+Nous avons à présent deux modèles valides (dont les résidus sont des bruits blancs). Afin de les départager nous allons faire plusieurs vérifications. Premièrement, que les résidus sont bien des bruits blancs via le lag-plot. Deuxièmement, que les coefficients de la partie $AR$ ne sont pas proche de 1. Et finalement, étudier le critère d'Akaike ($AIC$).    
+
+### Vérification des résidus :
+
+#### Modèle 2 :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod2), lags = 25)
+```
+
+#### Modèle 3 :
+
+```{r out.width="80%", out.height = "80%"}
+lag.plot(residuals(mod3), lags = 25)
+```
+
+#### Conclusion : 
+
+Les lag-plots montre qu'il n'a aucune corrélation entre les résidus des deux modèles, ce n'est donc pas possible de les départager avec cette première vérification.
+
+
+### Coefficients de la partie AR :
+
+#### modèle 2 :
+
+```{r}
+mod2$coef
+```
+
+#### modèle 3 :
+
+```{r}
+mod3$coef
+```
+
+#### Conclusion : 
+
+
+Les deux modèles ont des coefficients AR assez loin de $1$. Donc la partie stationnaire modélisée est bien stationnaire.
+
+
+### Criètre d'Akaike :
+
+Le critère d'Akaike, $AIC(p,q)$ $=$ $log(\sigma^2)$ $+$ $2\frac{p+q}{T}$, en minimisant ce critère cela permettra d'avoir à la fois le modèle le **mieux ajustée** et le plus **parcimonieux**.
+
+```{r}
+sprintf("AIC du modèle 2 : %f", mod2$aic)
+sprintf("AIC du modèle 3 : %f", mod3$aic)
+```
+
+C'est le troisième modèle qui présente l'AIC le plus faible.
+
+### Conclusion de la comparaison des modèles : 
+
+Nos deux modèles sont valides; leurs résidus sont bien des bruits blancs et les coefficients de la partie $AR$ sont loin de 1. Ce qui va permettre de les départager c'est le critère d'Akaike, en effet, c'est le modèle 3 qui minimise ce critère et c'est pourquoi on va passer à la partie prévision avec ce modèle.
+
+\newpage
+
+## Prévisions du modèle : 
+
+Le modèle final est le suivant :
+
+<p style="text-align: center;"> $\phi(\beta)\nabla^dX_t$ $=$ $\theta(\beta^s)\nabla^D_s\epsilon_t$ </p>
+
+Avec : 
+
+* $\phi(B)$ $=$ $I - B$, partie $AR(1)$.
+* $\nabla^d$ $=$ $(I - B)^d$, avec $d$ $=$ $1$. Partie stationnarisation.
+* $\theta(B^S)$ $=$ $(I - B^s)$, avec $s$ $=$ $12$. $MA(12)$.
+* $\nabla^D_s$ $=$ $(I - B^s)^D$, avec $s$ $=$ $12$, $D$ $=$ $1$. Partie différenciation.
+
+Nous allons effectuer des prévisions sur 12 mois, et comparer les données prédites aux données réels.
+
+```{r out.width="80%", out.height = "80%"}
+modfinal = Arima(USAccDeaths.M, order = c(1,1,0), seasonal = list(order = c(0,1,1), period = 12))
+summary(modfinal)
+```
+```{r out.width="80%", out.height = "80%"}
+prevision =  forecast(modfinal, 12)
+
+{plot(prevision)
+points(USAccDeaths.T, type = "l", col = "red", lwd = 1.5)}
+```
+
+### Analyse à Posteriori :
+
+Pour analyser la qualité de la prédiction, on va calculer le $RMSE$ et le $MAPE$.
+
+* $RMSE$ = $\sqrt(\frac{1}{n}\sum_{i = 1}^{n}(X_i - \hat{X_i})^2)$
+* $MAPE$ = $\sqrt(\frac{1}{n}\sum_{i = 1}^{n}(\lvert \frac{X_i - \hat{X_i}}{X_i} \rvert))$
+
+```{r}
+RMSE.lm <- sqrt(mean((prevision$mean - USAccDeaths.T)^2))
+MAPE.lm <- mean(abs((prevision$mean - USAccDeaths.T)/abs(USAccDeaths.T)))
+
+sprintf("RMSE : %f", RMSE.lm)
+sprintf("MAPE : %f", MAPE.lm)
+```
+
+
+
+# Partie 2 : Prédiction par Lissage Exponentiel 
+
+```{r, echo = FALSE}
+#install.packages("forecast")
+library("forecast")
+```
+
+Comme la série étudiée possède une saisonalité, on sait que les lissages exponentiels simples et doubles ne sont pas adaptés. On va donc directement faire un lissage exponentiel de Holt-Winters. De plus, comme la variance de nos données ne semble pas augmenter avec le temps, on préférera la version additive à la version multiplicative.
+
+
+### Modèle de Holt-Winters additif sans amortissement
+
+```{r echo=FALSE}
+liss_HW_d = ets(train, model="AAA",damped = FALSE)
+
+data_pred_HW_d = forecast(liss_HW_d, h=12)
+plot(data_pred_HW_d)
+points(test, type = "l", col="red", lwd=2)
+```
+```{r echo=FALSE}
+liss_HW_d
+```
+
+On regarde les critères AIC et BIC pour avoir une idée de la pertinence de notre modèle. On peut donc voir que l'on a un AIC de 954.2488 et un BIC de 989.8527  .
+
+```{r, echo = FALSE}
+RMSE_HW_d = sqrt(mean((test - data_pred_HW_d$mean)^2))
+RMSE_HW_d
+
+MAPE_HW_d = mean(abs((test - data_pred_HW_d$mean)/test))
+MAPE_HW_d
+```
+
+
+
+### Modèle de Holt-Winters additif avec amortissement
+```{r echo=FALSE}
+liss_HW = ets(train, model="AAA",damped = TRUE)
+
+data_pred_HW = forecast(liss_HW, h=12)
+plot(data_pred_HW)
+points(test, type = "l", col="red", lwd=2)
+```
+```{r echo=FALSE}
+liss_HW
+```
+
+On regarde les critères AIC et BIC pour avoir une idée de la pertinence de notre modèle. On peut donc voir que l'on a un AIC de 950.6122 et un BIC de 988.3104 .
+
+```{r, echo = FALSE}
+RMSE_HW = sqrt(mean((test - data_pred_HW$mean)^2))
+RMSE_HW
+
+MAPE_HW = mean(abs((test - data_pred_HW$mean)/test))
+MAPE_HW
+```
+
+On peut donc voir d'après les critères ci-dessus, que le modèle avec amortissement est meilleur que le modèle sans ammortissement.
+
+### Prédiction
+
+Maintenant que l'on a sélectionné le modèle qui semblait être plus performant (additif avec ammortissement), on peut donc l'utiliser pour faire une prédiction sur les 3 prochaines années.
+
+```{r echo=FALSE}
+liss_final = ets(USAccDeaths, model = "AAA", damped = TRUE)
+
+pred_liss_exp = forecast(liss_final, h=3*12)
+plot(pred_liss_exp)
+legend("topleft", legend = "Prédiction", col = "blue", lty=c(1,1), cex=0.8)
+```
+
+
+# Partie 3 : Prédiction par régression 
+
+Dans cette dernière partie, nous souhaitons expliciter la tendance en fonction de t.
+Comme dit precedamment, on ne semble pas vraiment avoir de tendance. Cependant comme vu lors de la partie SARIMA, ceci est peut-être faux.
+
+Nous allons commencer par supposer que la tendance est lineaire puis nous supposerons qu'elle est quadratic et nous compareront les résultats.
+
+### Tendance linéaire 
+
+```{r, echo = FALSE}
+Trend = cbind(seq(1, length(train), 1))
+plot(Trend)
+```
+
+La série étudiée possède une tendance linéaire et une saisonalité de 12. On aura donc :
+$$ T_t = a + bt \quad et \quad S_t = \alpha icos(\frac{2\pi it}{12}) + \beta i sin(\frac{2\pi it}{12})$$
+On va donc avoir une matrice de la forme :
+$$ \begin{pmatrix}
+1 & 1 & cos(\frac{2\pi}{12}) & cos(\frac{2\pi *2}{12}) & . & sin(\frac{2\pi * 1}{12}) & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+1 & T & cos(\frac{2\pi T}{12}) & cos(\frac{2\pi *T *2}{12}) & . & sin(\frac{2\pi * T * 1}{12}) & . 
+\end{pmatrix}$$
+```{r, echo = FALSE}
+f = t(as.matrix(1:6))/12
+Seasonal = cbind(cos(2*pi*Trend %*% f), sin(2*pi*Trend %*% f))
+Seasonal[,12]
+```
+
+On peut voir que la 12ème colonne est d'ordre 10^-14 à 10^-18. On va donc la retirer.
+```{r, echo = FALSE}
+Seasonal = Seasonal[, -12]
+```
+
+On fait la matrice de régression :
+```{r, echo = FALSE}
+Regresseur = as.data.frame(cbind(Trend, Seasonal))
+head(Regresseur)
+```
+
+Ce qui nous donne le model suivant : 
+```{r, echo = FALSE}
+model = lm(train ~ ., data = Regresseur)
+summary(model)
+```
+```{r, echo = FALSE}
+#install.packages("ggpubr")
+library(ggpubr)
+```
+
+Voici la densité des résidu : 
+
+```{r, echo = FALSE}
+ggdensity(model$residuals, fill = "lightgray")
+```
+
+Cette densité nous montre que nos résidus ne semble pas distribués de manière gausienne et il semble cependant centrés en 0.
+Vérifions que nos résidus sont des bruits blancs(peut probable au vu du graph précedent).
+
+```{r, echo = FALSE}
+lag.plot(model$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+
+```{r, echo = FALSE}
+par(mfrow = c(2,3))
+plot(model)
+qqnorm(model$residuals)
+```
+
+On voit que les résidus suivent globalement une droite sur au moins 3 des lagplots. De même le Q-Q plot ne semble pas correspondre à ce que l'on attends d'un bruit blanc (une belle droite en x=y).
+
+Ils sont donc corrélés et ce ne sont pas des bruit blanc.
+
+On va essayer de décorréler les résidus afin d'avoir un bruit blanc.
+
+Traçons l'ACF et le PACF. 
+
+```{r, echo = FALSE}
+acf(model$residuals)
+```
+```{r, echo = FALSE}
+pacf(model$residuals)
+```
+
+En suivant les mêmes rêgles que lors de la partie I on peut voir qu'il semble judicieux d'utiliser un AR(1):
+
+
+```{r, echo = FALSE}
+model_arima = Arima(train, order=c(1,0,0), xreg = as.matrix(Regresseur))
+summary(model_arima)
+```
+```{r, echo = FALSE}
+lag.plot(model_arima$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+```{r, echo = FALSE}
+acf(model_arima$residuals)
+```
+```{r}
+pacf(model_arima$residuals)
+```
+```{r, echo = FALSE}
+qqnorm(model_arima$residuals)
+```
+
+Test pour savoir si les résidus sont bien des bruits blancs.
+```{r, echo = FALSE}
+#t(Box.test.2(model$residuals, seq(6, 30, 6), type="Ljung-Box", decim=2, fitdf=13))
+```
+
+On va ensuite essayer de faire une prédiction avec le modèle où les résidus sont corrélés et ensuite avec les résidus non corrélés.
+
+```{r, echo = FALSE}
+Trend_pred = cbind(seq(length(train)+1, length(train)+length(test), 1))
+plot(Trend_pred)
+```
+```{r, echo = FALSE}
+f = t(as.matrix(1:6))/12
+Seasonal_pred = cbind(cos(2*pi*Trend_pred %*% f), sin(2*pi*Trend_pred %*% f))[, -12]
+## On enlève la dernière colone car elle est de l'ordre de 10e-16 donc très faible (proche de 0)
+head(Seasonal_pred)
+```
+```{r, echo = FALSE}
+Regresseur_pred = as.data.frame(cbind(Trend_pred, Seasonal_pred))
+head(Regresseur_pred)
+```
+
+```{r, echo = FALSE}
+#prediction = forecast(model, newdata =Regresseur_pred)
+prediction = forecast(model_arima, xreg = as.matrix(Regresseur_pred))
+
+
+plot(USAccDeaths)
+lines(ts((model_arima$fitted), start = 1973, end = c(1977, 12), frequency = 12), col = "green")
+lines(ts((prediction$mean), start = c(1978,1), frequency = 12), col = "red")
+```
+
+On va calculer le RMSE et le MAPE :
+```{r, echo = FALSE}
+RMSE_auto = sqrt(mean((test - prediction$mean)^2))
+RMSE_auto
+MAPE_auto = mean(abs((test - prediction$mean)/test))
+MAPE_auto
+```
+
+### Tendance Quadratique
+
+Nous allons maintenant supposer une tendances quadratique : 
+
+```{r, echo=FALSE}
+Trend_quad = cbind(seq(1,length(train),1) ,seq(1, length(train), 1)*seq(1, length(train), 1))
+plot(Trend_quad)
+```
+
+Notre matrice sera cette fois de la forme : 
+$$ \begin{pmatrix}
+1 & 1^2 & cos(\frac{2\pi}{12}) & cos(\frac{2\pi *2}{12}) & . & sin(\frac{2\pi * 1}{12}) & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+. & . & . & . & . & . & .\\
+1 & T^2 & cos(\frac{2\pi T}{12}) & cos(\frac{2\pi *T *2}{12}) & . & sin(\frac{2\pi * T * 1}{12}) & . 
+\end{pmatrix}$$
+
+```{r, echo = FALSE}
+f = t(as.matrix(1:6))/12
+Seasonal = cbind(cos(2*pi*cbind(seq(1,length(train),1)) %*% f), sin(2*pi*cbind(seq(1,length(train),1)) %*% f))
+Seasonal = Seasonal[, -12]
+Regresseur = as.data.frame(cbind(Trend_quad, Seasonal))
+head(Regresseur)
+```
+```{r echo=FALSE}
+model = lm(train ~ ., data = Regresseur)
+summary(model)
+```
+```{r, echo = FALSE}
+ggdensity(model$residuals, fill = "lightgray")
+```
+
+Cette fois, on obtient une densité qui nous laisse penser que nos résidus sont distribués de manière gausienne et centrés en 0.
+Il faut maintenant que l'on vérifie que nos résidus sont des bruits blancs.
+
+```{r, echo = FALSE}
+lag.plot(model$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+
+```{r, echo = FALSE}
+par(mfrow = c(2,3))
+plot(model)
+qqnorm(model$residuals)
+```
+
+Encore une fois on observe que nous n'avons pas des bruit blanc, il semble y avoir une correlation dans au moins au lagplot, et le QQplot ne suit pas totalement une droite.
+
+Traçon l'ACF et le PACF afin de voir comment décorréler nos résidus. 
+
+```{r, echo = FALSE}
+acf(model$residuals)
+```
+
+```{r, echo = FALSE}
+pacf(model$residuals)
+```
+
+Encore une fois il semble que l'on doit utiliser un AR(1) : 
+
+```{r, echo = FALSE}
+model_arima = Arima(train, order=c(1,0,0), xreg = as.matrix(Regresseur))
+summary(model_arima)
+```
+```{r, echo = FALSE}
+lag.plot(model_arima$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+
+```{r, echo = FALSE}
+qqnorm(model_arima$residuals)
+```
+
+```{r, echo = FALSE}
+acf(model_arima$residuals)
+```
+
+On pourrait aussi faire de nouveau un test comme précédement avec la bilbiothèque qui ne fonctionne pas :
+Test pour savoir si les résidus sont bien des bruits blancs.
+```{r, echo = FALSE}
+#t(Box.test.2(model$residuals, seq(6, 30, 6), type="Ljung-Box", decim=2, fitdf=13))
+```
+
+On va maintenant faire une prédiction avec le modèle où les résidus sont non corrélés.
+
+```{r, echo = FALSE}
+Trend_pred = cbind(seq(length(train)+1, length(train)+length(test), 1) ,seq(length(train)+1, length(train)+length(test), 1)* seq(length(train)+1, length(train)+length(test), 1))
+f = t(as.matrix(1:6))/12
+Seasonal_pred = cbind(cos(2*pi*cbind(seq(1, length(test), 1)) %*% f), sin(2*pi*cbind(seq(1, length(test), 1)) %*% f))[, -12]
+Regresseur_pred = as.data.frame(cbind(Trend_pred, Seasonal_pred))
+Regresseur_pred
+```
+```{r, echo = FALSE}
+prediction = forecast(model_arima, xreg = as.matrix(Regresseur_pred))
+
+plot(USAccDeaths)
+lines(ts((model$fitted.values), start = 1973, end = c(1977, 12), frequency = 12), col = "green")
+lines(ts((prediction$mean), start = c(1978,1), frequency = 12), col = "red")
+```
+
+On calcule le RMSE et le MAPE :
+```{r, echo = FALSE}
+RMSE_auto = sqrt(mean((test - prediction$mean)^2))
+RMSE_auto
+MAPE_auto = mean(abs((test - prediction$mean)/test))
+MAPE_auto
+```
+
+### Prédiction sur 3 ans
+
+Il constate donc que le modèle avec la tendance quadratique semble être meilleur que le modèle avec la tendance linéaire. 
+
+Nous allons maintenant effectuer des prévisions sur 3 ans avec le modèle quadratique : 
+
+```{r, echo = FALSE}
+Trend = cbind(seq(1, length(USAccDeaths), 1))
+
+f = t(as.matrix(1:6))/12
+Seasonal = cbind(cos(2*pi*Trend %*% f), sin(2*pi*Trend %*% f))[, -12]
+## On enlève la dernière colone car elle est de l'ordre de 10e-16 donc très faible (proche de 0)
+
+Regresseur = as.data.frame(cbind(Trend, Seasonal))
+
+model_final = Arima(USAccDeaths, order=c(1,0,0), xreg = as.matrix(Regresseur))
+```
+
+
+```{r, echo = FALSE}
+Trend_new = cbind(seq(length(USAccDeaths)+1, length(USAccDeaths)+ 3*12, 1))
+
+f = t(as.matrix(1:6))/12
+Seasonal_new = cbind(cos(2*pi*Trend_new %*% f), sin(2*pi*Trend_new %*% f))[, -12]
+## On enlève la dernière colone car elle est de l'ordre de 10e-16 donc très faible (proche de 0)
+
+Regresseur_new = as.data.frame(cbind(Trend_new, Seasonal_new))
+head(Regresseur_new)
+```
+
+
+```{r, echo = FALSE}
+prediction = forecast(model_final, xreg = as.matrix(Regresseur_new))
+
+plot(prediction)
+```
+
+# Conclusion 
+
+Afin de déterminer quel modèle est le plus performant, nous allons comparer les critères d'erreurs de chacun de ces modèles.
+
+$SARIMA(1,1,0)(0,1,1)_12$ : 
+- RMSE = 287.149069
+- MAPE = 0.027322
+
+Lissage exponentiel (HW additif avec ammortissement) :
+- RMSE = 292.3417
+- MAPE = 0.02542135
+
+Régression linéaire :
+- RMSE = 240.0805
+- MAPE = 0.02569034
+
+Le modèle par régression est clairement le plus performant, notamment grâce au modèle ayant une tendance quadratique. Les résultats du SARIMA et du lissage exponentiel sont très proche, il est donc dur de determiner quel est le meilleur modèle entre les deux.
+
+
+
+

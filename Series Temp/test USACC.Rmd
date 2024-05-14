@@ -1,0 +1,116 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r echo=FALSE}
+train = window(USAccDeaths, start = 1973, end = c(1977,12))
+test = window(USAccDeaths, start = 1978)
+
+par(mfrow = c(1,2))
+plot(train)
+plot(test)
+```
+
+
+## Partie X : Prédiction par régression 
+```{r, echo=FALSE}
+Trend_quad = cbind(seq(1,length(train),1) ,seq(1, length(train), 1)*seq(1, length(train), 1))
+plot(Trend_quad)
+```
+
+```{r}
+f = t(as.matrix(1:6))/12
+Seasonal = cbind(cos(2*pi*cbind(seq(1,length(train),1)) %*% f), sin(2*pi*cbind(seq(1,length(train),1)) %*% f))
+Seasonal[,12]
+```
+On peut voir que la 12ème colonne est d'ordre 10^-14 à 10^-18. On va donc la retirer.
+```{r}
+Seasonal = Seasonal[, -12]
+```
+On fait la matrice de régression 
+```{r}
+Regresseur = as.data.frame(cbind(Trend_quad, Seasonal))
+Regresseur
+```
+```{r}
+model = lm(train ~ ., data = Regresseur)
+summary(model)
+```
+```{r}
+#install.packages("ggpubr")
+library(ggpubr)
+```
+
+
+```{r}
+ggdensity(model$residuals, fill = "lightgray")
+```
+```{r}
+lag.plot(model$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+```{r}
+acf(model$residuals)
+```
+```{r}
+pacf(model$residuals)
+```
+
+
+On va essayer de décorréler les résidus afin d'avoir un bruit blanc.
+On peut afficher le qqplot de nos résidus avec :
+```{r}
+par(mfrow = c(2,3))
+plot(model)
+qqnorm(model$residuals)
+```
+```{r}
+model_arima = Arima(train, order=c(1,0,0), xreg = as.matrix(Regresseur))
+summary(model_arima)
+```
+```{r}
+lag.plot(model_arima$residuals, 12, layout = c(4,3), do.lines = FALSE, diag.col = "red")
+```
+```{r}
+acf(model_arima$residuals)
+```
+```{r}
+qqnorm(model_arima$residuals)
+```
+On pourrait aussi faire de nouveau un test comme précédement avec la bilbiothèque qui ne fonctionne pas :
+Test pour savoir si les résidus sont bien des bruits blancs.
+```{r}
+#t(Box.test.2(model$residuals, seq(6, 30, 6), type="Ljung-Box", decim=2, fitdf=13))
+```
+
+On va ensuite essayer de faire une prédiction avec le modèle où les résidus sont corrélés et ensuite avec les résidus non corrélés.
+
+```{r}
+Trend_pred = cbind(seq(length(train)+1, length(train)+length(test), 1) ,seq(length(train)+1, length(train)+length(test), 1)* seq(length(train)+1, length(train)+length(test), 1))
+plot(Trend_pred)
+```
+```{r}
+f = t(as.matrix(1:6))/12
+Seasonal_pred = cbind(cos(2*pi*cbind(seq(1, length(test), 1)) %*% f), sin(2*pi*cbind(seq(1, length(test), 1)) %*% f))[, -12]
+## On enlève la dernière colone car elle est de l'ordre de 10e-16 donc très faible (proche de 0)
+Seasonal_pred
+```
+```{r}
+Regresseur_pred = as.data.frame(cbind(Trend_pred, Seasonal_pred))
+Regresseur_pred
+```
+
+```{r}
+prediction = forecast(model_arima, xreg = as.matrix(Regresseur_pred))
+
+plot(USAccDeaths)
+lines(ts((model$fitted.values), start = 1973, end = c(1977, 12), frequency = 12), col = "green")
+lines(ts((prediction$mean), start = c(1978,1), frequency = 12), col = "red")
+```
+On va calculer le RMSE et le MAPE :
+```{r}
+RMSE_auto = sqrt(mean((test - prediction$mean)^2))
+RMSE_auto
+MAPE_auto = mean(abs((test - prediction$mean)/test))
+MAPE_auto
+```
