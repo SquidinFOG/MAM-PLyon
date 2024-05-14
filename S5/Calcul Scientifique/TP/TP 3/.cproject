@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="intel.config.composerxe.exe.debug.1943120974">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="intel.config.composerxe.exe.debug.1943120974" moduleId="org.eclipse.cdt.core.settings" name="Debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.ICCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" description="" id="intel.config.composerxe.exe.debug.1943120974" name="Debug" optionalBuildProperties="" parent="intel.config.composerxe.exe.debug">
+					<folderInfo id="intel.config.composerxe.exe.debug.1943120974." name="/" resourcePath="">
+						<toolChain id="intel.toolchain.composerxe.exe.debug.2087126999" name="Intel(R) C++ Compiler XE" superClass="intel.toolchain.composerxe.exe.debug">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="intel.platform.composerxe.base.1614984948" isAbstract="false" name="intel.platform.base" superClass="intel.platform.composerxe.base"/>
+							<builder buildPath="${workspace_loc:/TP 3}/Debug" id="intel.builder.composerxe.makebuilder.1925354151" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="intel.builder.composerxe.makebuilder"/>
+							<tool id="intel.tool.archiver.composerxe.base.2124630872" name="Intel Archiver" superClass="intel.tool.archiver.composerxe.base"/>
+							<tool id="intel.tool.cpp.compiler.composerxe.base.1526457313" name="Intel C++ Compiler" superClass="intel.tool.cpp.compiler.composerxe.base">
+								<option defaultValue="true" id="intel.compilestep.general.debug.2022915436" name="Include Debug Information (-g)" superClass="intel.compilestep.general.debug" valueType="boolean"/>
+								<option defaultValue="general.opt.none" id="intel.compilestep.general.optimization2.93527688" name="Optimization Level" superClass="intel.compilestep.general.optimization2" valueType="enumerated"/>
+							</tool>
+							<tool id="intel.tool.c.compiler.composerxe.base.1538715692" name="Intel C Compiler" superClass="intel.tool.c.compiler.composerxe.base">
+								<option defaultValue="true" id="intel.compilestep.general.debug.1234936418" name="Include Debug Information (-g)" superClass="intel.compilestep.general.debug" valueType="boolean"/>
+								<option defaultValue="general.opt.none" id="intel.compilestep.general.optimization2.704203941" name="Optimization Level" superClass="intel.compilestep.general.optimization2" valueType="enumerated"/>
+								<inputType id="intel.c.compilestep.input.1924791752" name="C Sources" superClass="intel.c.compilestep.input"/>
+							</tool>
+							<tool id="intel.tool.cpp.linker.composerxe.base.1497155654" name="Intel C++ Linker" superClass="intel.tool.cpp.linker.composerxe.base"/>
+							<tool id="intel.tool.c.linker.composerxe.base.742641829" name="Intel C Linker" superClass="intel.tool.c.linker.composerxe.base">
+								<inputType id="intel.linkstep.input.1612527340" superClass="intel.linkstep.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="intel.config.composerxe.exe.release.732507767">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="intel.config.composerxe.exe.release.732507767" moduleId="org.eclipse.cdt.core.settings" name="Release">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.ICCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" description="" id="intel.config.composerxe.exe.release.732507767" name="Release" parent="intel.config.composerxe.exe.release">
+					<folderInfo id="intel.config.composerxe.exe.release.732507767." name="/" resourcePath="">
+						<toolChain id="intel.toolchain.composerxe.exe.release.546635334" name="Intel(R) C++ Compiler XE" superClass="intel.toolchain.composerxe.exe.release">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="intel.platform.composerxe.base.665373515" isAbstract="false" name="intel.platform.base" superClass="intel.platform.composerxe.base"/>
+							<builder buildPath="${workspace_loc:/TP 3}/Release" id="intel.builder.composerxe.makebuilder.164800380" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="intel.builder.composerxe.makebuilder"/>
+							<tool id="intel.tool.archiver.composerxe.base.1724388094" name="Intel Archiver" superClass="intel.tool.archiver.composerxe.base"/>
+							<tool id="intel.tool.cpp.compiler.composerxe.base.743927577" name="Intel C++ Compiler" superClass="intel.tool.cpp.compiler.composerxe.base">
+								<option defaultValue="false" id="intel.compilestep.general.debug.1463898898" name="Include Debug Information (-g)" superClass="intel.compilestep.general.debug" valueType="boolean"/>
+								<option defaultValue="general.opt.speed" id="intel.compilestep.general.optimization2.932815585" name="Optimization Level" superClass="intel.compilestep.general.optimization2" valueType="enumerated"/>
+							</tool>
+							<tool id="intel.tool.c.compiler.composerxe.base.787212908" name="Intel C Compiler" superClass="intel.tool.c.compiler.composerxe.base">
+								<option defaultValue="false" id="intel.compilestep.general.debug.399713584" name="Include Debug Information (-g)" superClass="intel.compilestep.general.debug" valueType="boolean"/>
+								<option defaultValue="general.opt.speed" id="intel.compilestep.general.optimization2.449939972" name="Optimization Level" superClass="intel.compilestep.general.optimization2" valueType="enumerated"/>
+								<inputType id="intel.c.compilestep.input.405263959" name="C Sources" superClass="intel.c.compilestep.input"/>
+							</tool>
+							<tool id="intel.tool.cpp.linker.composerxe.base.828414898" name="Intel C++ Linker" superClass="intel.tool.cpp.linker.composerxe.base"/>
+							<tool id="intel.tool.c.linker.composerxe.base.854870077" name="Intel C Linker" superClass="intel.tool.c.linker.composerxe.base">
+								<inputType id="intel.linkstep.input.918679646" superClass="intel.linkstep.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="TP 3.intel.target.composerxe.exe.1924303647" name="Executable" projectType="intel.target.composerxe.exe"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+</cproject>

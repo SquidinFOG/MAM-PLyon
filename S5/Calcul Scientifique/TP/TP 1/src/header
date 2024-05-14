@@ -1,0 +1,4 @@
+#ifndef TAILLE_H_
+#define TAILLE_H_
+#define N 10
+#endif /* TAILLE_H_*/
